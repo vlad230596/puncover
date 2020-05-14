@@ -118,21 +118,29 @@ class Collector:
         return sym
 
     # 00000550 00000034 T main	/Users/behrens/Documents/projects/pebble/puncover/puncover/build/../src/puncover.c:25
-    parse_size_line_re = re.compile(r"^([\da-f]{8})\s+([\da-f]{8})\s+(.)\s+(\w+)(\s+([^:]+):(\d+))?")
+    if os.name == 'nt':
+      parse_size_line_re = re.compile(r"^([\da-f]{8})\s+([\da-f]{8})\s+(.)\s+(\w+)(\s+([\w]:)([^:]+):(\d+))?")
+    else:
+      parse_size_line_re = re.compile(r"^([\da-f]{8})\s+([\da-f]{8})\s+(.)\s+(\w+)(\s+([^:]+):(\d+))?")
 
+       
     def parse_size_line(self, line):
         # print(line)
+        if os.name == 'nt':
+          group_offset = 1
+        else:
+          group_offset = 0
+          
         match = self.parse_size_line_re.match(line)
         if not match:
             return False
-
         addr = match.group(1)
         size = int(match.group(2), 16)
         type = match.group(3)
         name = match.group(4)
         if match.group(5):
-            file = match.group(6)
-            line = int(match.group(7))
+            file = match.group(6+group_offset)
+            line = int(match.group(7+group_offset))
         else:
             file = None
             line = None
@@ -148,6 +156,7 @@ class Collector:
     parse_assembly_text_function_start_pattern = re.compile(r"^([\da-f]{8})\s+<(\.?\w+)(\..*)?>:")
 
     # /Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c:8
+    #seperator = os.path.sep
     parse_assembly_text_c_reference_pattern = re.compile(r"^(/[^:]+)(:(\d+))?")
 
     def parse_assembly_text(self, assembly):
@@ -201,7 +210,6 @@ class Collector:
         symbol_name = match.group(5)
         stack_size = int(match.group(6))
         stack_qualifier = match.group(7)
-
         return self.add_stack_usage(base_file_name, line, symbol_name, stack_size, stack_qualifier)
 
     # TODO: handle operators, e.g. String::operator=(char const*)
@@ -280,14 +288,13 @@ class Collector:
 
 
     def normalize_files_paths(self, base_dir):
-        base_dir = os.path.abspath(base_dir) if base_dir else "/"
-
+        base_dir = os.path.abspath(base_dir) if base_dir else os.path.sep
         for s in self.all_symbols():
             path = s.get(PATH, None)
             if path:
                 if path.startswith(base_dir):
                     path = os.path.relpath(path, base_dir)
-                elif path.startswith("/"):
+                elif path.startswith(os.path.sep):
                     path = path[1:]
                 s[PATH] = path
 
@@ -466,7 +473,7 @@ class Collector:
         result = self.file_elements.get(path, None)
         if not result:
             parent_dir = os.path.dirname(path)
-            parent_folder = self.folder_for_path(parent_dir) if parent_dir and parent_dir != "/" else None
+            parent_folder = self.folder_for_path(parent_dir) if parent_dir and parent_dir != os.path.sep else None
             result = {
                 TYPE: type,
                 PATH: path,
