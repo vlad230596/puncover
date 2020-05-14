@@ -146,7 +146,6 @@ class Collector:
             line = None
 
         types = {"T": TYPE_FUNCTION, "D": TYPE_VARIABLE, "B": TYPE_VARIABLE, "R": TYPE_VARIABLE}
-
         self.add_symbol(name, address=addr, size=size, file=file, line=line, type = types.get(type.upper(), None))
 
         return True
@@ -157,7 +156,7 @@ class Collector:
 
     # /Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c:8
     #seperator = os.path.sep
-    parse_assembly_text_c_reference_pattern = re.compile(r"^(/[^:]+)(:(\d+))?")
+    parse_assembly_text_c_reference_pattern = re.compile(r"^([\w]?:?/[^:]+)(:(\d+))?")
 
     def parse_assembly_text(self, assembly):
         # print(assembly)
@@ -473,7 +472,12 @@ class Collector:
         result = self.file_elements.get(path, None)
         if not result:
             parent_dir = os.path.dirname(path)
+            #this makes the unit test work, but fails on showing actual paths in the end...
+            #if os.name == 'nt':
+            #  parent_folder = self.folder_for_path(parent_dir) if parent_dir and len(parent_dir) == 3 else None
+            #else:
             parent_folder = self.folder_for_path(parent_dir) if parent_dir and parent_dir != os.path.sep else None
+            
             result = {
                 TYPE: type,
                 PATH: path,

@@ -1,4 +1,5 @@
 import unittest
+import os
 from puncover.collector import Collector, left_strip_from_list
 from mock import patch
 from puncover import collector
@@ -14,22 +15,38 @@ class TestCollector(unittest.TestCase):
 
     def test_parses_function_line(self):
         c = Collector(None)
-        line = "00000550 00000034 T main	/Users/behrens/Documents/projects/pebble/puncover/puncover/build/../src/puncover.c:25"
+        if os.name == 'nt':
+          line = "00000550 00000034 T main	c:/Users/behrens/Documents/projects/pebble/puncover/puncover/build/../src/puncover.c:25"
+        else:
+          line = "00000550 00000034 T main	/Users/behrens/Documents/projects/pebble/puncover/puncover/build/../src/puncover.c:25"
+
         self.assertTrue(c.parse_size_line(line))
         self.assertDictEqual(c.symbols, {0x00000550: {'name': 'main', 'base_file': 'puncover.c', 'path': '/Users/behrens/Documents/projects/pebble/puncover/puncover/build/../src/puncover.c', 'address': '00000550', 'line': 25, 'size': 52, 'type': 'function'}})
 
     def test_parses_variable_line_from_initialized_data_section(self):
-        c = Collector(None)
-        line = "00000968 000000c8 D foo	/Users/behrens/Documents/projects/pebble/puncover/pebble/build/puncover.c:15"
+        c = Collector(None)        
+        if os.name == 'nt':
+          line = "00000968 000000c8 D foo	c:/Users/behrens/Documents/projects/pebble/puncover/pebble/build/puncover.c:15"
+        else:
+          line = "00000968 000000c8 D foo	/Users/behrens/Documents/projects/pebble/puncover/pebble/build/puncover.c:15"
+        
         self.assertTrue(c.parse_size_line(line))
         self.assertDictEqual(c.symbols, {0x00000968: {'name': 'foo', 'base_file': 'puncover.c', 'path': '/Users/behrens/Documents/projects/pebble/puncover/pebble/build/puncover.c', 'address': '00000968', 'line': 15, 'size': 200, 'type': 'variable'}})
 
     def test_parses_variable_line_from_uninitialized_data_section(self):
         c = Collector(None)
-        line = "00000a38 00000008 b some_double_value	/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c:17"
+        if os.name == 'nt':
+          line = "00000a38 00000008 b some_double_value	/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c:17"
+        else:
+          line = "00000a38 00000008 b some_double_value	c:/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c:17"
+        
         self.assertTrue(c.parse_size_line(line))
-        self.assertDictEqual(c.symbols, {0x00000a38: {'name': 'some_double_value', 'base_file': 'puncover.c', 'path': '/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c', 'address': '00000a38', 'line': 17, 'size': 8, 'type': 'variable'}})
-
+        print(c.symbols)
+        if os.name == 'nt':
+          self.assertDictEqual(c.symbols, {0x00000a38: {'name': 'some_double_value', 'base_file': 'puncover.c', 'path': '/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c', 'address': '00000a38', 'line': 17, 'size': 8, 'type': 'variable'}})
+        else:
+          self.assertDictEqual(c.symbols, {0x00000a38: {'name': 'some_double_value', 'base_file': 'puncover.c', 'path': 'c:/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c', 'address': '00000a38', 'line': 17, 'size': 8, 'type': 'variable'}})
+          
     def test_ignores_incomplete_size_line_1(self):
         c = Collector(None)
         line = "0000059c D __dso_handle"
@@ -304,14 +321,27 @@ $t():
 
     def test_derive_filename_from_assembly(self):
         c = Collector(None)
-        c.parse_assembly_text("""
+        if os.name == 'nt':
+           c.parse_assembly_text("""
+000008a8 <uses_doubles2.constprop.0>:
+uses_doubles2():
+c:/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c:19
+ 8a8:	b508      	push	{r3, lr}
+         """)
+        else:
+           c.parse_assembly_text("""
 000008a8 <uses_doubles2.constprop.0>:
 uses_doubles2():
 /Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c:19
  8a8:	b508      	push	{r3, lr}
          """)
+       
         s = c.symbol_by_addr("8a8")
-        self.assertEqual("/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c", s[collector.PATH])
+        
+        if os.name == 'nt':
+          self.assertEqual("c:/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c", s[collector.PATH])
+        else:
+          self.assertEqual("/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c", s[collector.PATH])
         self.assertEqual("puncover.c", s[collector.BASE_FILE])
         self.assertEqual(19, s[collector.LINE])
 
@@ -348,9 +378,15 @@ uses_doubles2():
 
     def test_derive_file_elements(self):
         c = Collector(None)
-        s1 = {collector.PATH: "/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c"}
-        s2 = {collector.PATH: "/Users/thomas/work/arm-eabi-toolchain/build/gcc-final/arm-none-eabi/thumb2/libgcc/../../../../../gcc-4.7-2012.09/libgcc/config/arm/ieee754-df.S"}
-        s3 = {collector.PATH: "src/puncover.c"}
+        if os.name == 'nt':
+          s1 = {collector.PATH: "C:/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c"}
+          s2 = {collector.PATH: "C:/Users/thomas/work/arm-eabi-toolchain/build/gcc-final/arm-none-eabi/thumb2/libgcc/../../../../../gcc-4.7-2012.09/libgcc/config/arm/ieee754-df.S"}
+          s3 = {collector.PATH: "src/puncover.c"}
+        else:
+          s1 = {collector.PATH: "/Users/behrens/Documents/projects/pebble/puncover/pebble/build/../src/puncover.c"}
+          s2 = {collector.PATH: "/Users/thomas/work/arm-eabi-toolchain/build/gcc-final/arm-none-eabi/thumb2/libgcc/../../../../../gcc-4.7-2012.09/libgcc/config/arm/ieee754-df.S"}
+          s3 = {collector.PATH: "src/puncover.c"}
+        
         c.symbols = {
             1: s1,
             2: s2,
@@ -358,13 +394,22 @@ uses_doubles2():
         }
 
         c.derive_folders()
-        self.assertEqual("/Users/behrens/Documents/projects/pebble/puncover/pebble/src/puncover.c", s1[collector.PATH])
+        if os.name == 'nt':
+          self.assertEqual("C:\\Users\\behrens\\Documents\\projects\\pebble\\puncover\\pebble\\src\\puncover.c", s1[collector.PATH])
+        else:
+          self.assertEqual("/Users/behrens/Documents/projects/pebble/puncover/pebble/src/puncover.c", s1[collector.PATH])
         self.assertIsNotNone(s1[collector.FILE])
 
-        self.assertEqual("/Users/thomas/work/arm-eabi-toolchain/gcc-4.7-2012.09/libgcc/config/arm/ieee754-df.S", s2[collector.PATH])
+        if os.name == 'nt':
+          self.assertEqual("C:\\Users\\thomas\\work\\arm-eabi-toolchain\\gcc-4.7-2012.09\\libgcc\\config\\arm\\ieee754-df.S", s2[collector.PATH])
+        else:
+          self.assertEqual("/Users/thomas/work/arm-eabi-toolchain/gcc-4.7-2012.09/libgcc/config/arm/ieee754-df.", s2[collector.PATH])
         self.assertIsNotNone(s2[collector.FILE])
-
-        self.assertEqual("src/puncover.c", s3[collector.PATH])
+        if os.name == 'nt':
+          self.assertEqual("src\\puncover.c", s3[collector.PATH])
+        else:
+          
+          self.assertEqual("src/puncover.c", s3[collector.PATH])
         self.assertIsNotNone(s3[collector.FILE])
 
     def test_derive_file_elements_for_unknown_files(self):
@@ -374,7 +419,11 @@ uses_doubles2():
         self.assertNotIn(collector.PATH, s)
         self.assertNotIn(collector.BASE_FILE, s)
         c.derive_folders()
-        self.assertEqual("<unknown>/<unknown>", s[collector.PATH])
+        if os.name == 'nt':
+          self.assertEqual("<unknown>\<unknown>", s[collector.PATH])
+        else:
+          self.assertEqual("<unknown>/<unknown>", s[collector.PATH])
+          
         self.assertEqual("<unknown>", s[collector.BASE_FILE])
         self.assertIn(collector.FILE, s)
         file = s[collector.FILE]
