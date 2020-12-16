@@ -291,6 +291,7 @@ class Collector:
         for s in self.all_symbols():
             path = s.get(PATH, None)
             if path:
+                path = os.path.abspath(path)
                 if path.startswith(base_dir):
                     path = os.path.relpath(path, base_dir)
                 elif path.startswith(os.path.sep):
@@ -472,6 +473,8 @@ class Collector:
         result = self.file_elements.get(path, None)
         if not result:
             parent_dir = os.path.dirname(path)
+            if parent_dir == path:
+                return None
             #this makes the unit test work, but fails on showing actual paths in the end...
             #if os.name == 'nt':
             #  parent_folder = self.folder_for_path(parent_dir) if parent_dir and len(parent_dir) == 3 else None
