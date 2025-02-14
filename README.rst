@@ -12,4 +12,4 @@ It creates a report with dissambler and call-stack analysis per directory, file,
 
 Run
     * ``python.exe -m pip install .``    
-    * ``python runner.py --arm_tools_dir="C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\13.3 rel1" --elf_file ./Test.elf``
+    * ``python runner.py --gcc_tools_base="C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\13.3 rel1\bin\arm-none-eabi-" --elf_file ./Test.elf``
